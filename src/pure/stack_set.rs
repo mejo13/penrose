@@ -133,12 +133,15 @@ where
     pub fn focus_tag(&mut self, tag: impl AsRef<str>) {
         let tag = tag.as_ref();
 
-        if self.screens.focus.workspace.tag == tag {
-            return; // already focused
-        }
+        let curr = self.screens.focus.workspace.tag.clone();
 
-        // If the tag is visible on another screen, focus moves to that screen
-        if !self.try_cycle_screen_to_tag(tag) {
+        if curr == tag && self.previous_tag != tag {
+            self.focus_tag(self.previous_tag.clone());
+            self.update_previous_tag(tag.into());
+        }
+        else if self.try_swap_focused_workspace_with_tag(tag) {
+            self.update_previous_tag(curr);
+        } else {
             // If the tag is hidden then it gets moved to the current screen
             self.try_swap_on_screen_workspace_with_hidden(tag);
         }
