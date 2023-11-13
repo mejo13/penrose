@@ -613,9 +613,16 @@ fn manage_existing_clients<X: XConn>(state: &mut State<X>, x: &X) -> Result<()> 
             info!(%id, "focusing _NET_ACTIVE_WINDOW client");
             state.client_set.focus_client(&id);
         }
-        _ => {
+        Ok(None) => {
             info!(%first_tag, "unable to determine an active window: focusing first tag");
             state.client_set.focus_tag(&first_tag);
+        }
+        _ => {
+            let num_screens = state.client_set.screens().count();
+            match num_screens % 2 {
+                0 => state.client_set.focus_screen((num_screens / 2) - 1),
+                _ => state.client_set.focus_screen(num_screens / 2),
+            };
         }
     };
 
