@@ -1,6 +1,7 @@
 //! Hook implementations and helpers for adding to your Penrose window manager
 pub mod ewmh;
 pub mod manage;
+pub mod mejo13;
 pub mod named_scratchpads;
 pub mod startup;
 pub mod window_swallowing;
