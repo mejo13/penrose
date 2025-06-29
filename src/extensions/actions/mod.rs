@@ -51,10 +51,12 @@ pub fn set_fullscreen_state<X: XConn>(
             .ok_or(Error::UnknownClient(id))?
             .r;
         state.client_set.float(id, r)?;
+        state.client_set.fullscreen.insert(id);
         wstate.push(*full_screen);
         x.set_client_config(id, &[ClientConfig::BorderPx(0)])?; // remove borders
     } else if currently_fullscreen && (action == Remove || action == Toggle) {
         state.client_set.sink(&id);
+        state.client_set.fullscreen.remove(&id);
         wstate.retain(|&val| val != *full_screen);
         // replace borders
         x.set_client_config(id, &[ClientConfig::BorderPx(state.config.border_width)])?;

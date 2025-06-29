@@ -11,7 +11,7 @@ use crate::{
 };
 use std::{
     cmp::Ordering,
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
     mem::{swap, take},
 };
@@ -26,6 +26,7 @@ where
     pub(crate) screens: Stack<Screen<C>>, // Workspaces visible on screens
     pub(crate) hidden: VecDeque<Workspace<C>>, // Workspaces not currently on any screen
     pub(crate) floating: HashMap<C, RelativeRect>, // Floating windows
+    pub(crate) fullscreen: HashSet<C>,    // Fullscreen windows
     pub(crate) previous_tag: String,      // The last tag to be focused before the current one
     pub(crate) invisible_tags: Vec<String>, // Tags that should never be focused
     pub(crate) killed_clients: Vec<C>, // clients that have been removed and need processing on the X side
@@ -54,13 +55,14 @@ where
 
         let screen_details: Vec<Rect> = screen_details.into_iter().collect();
 
-        Self::try_new_concrete(workspaces, screen_details, HashMap::new())
+        Self::try_new_concrete(workspaces, screen_details, HashMap::new(), HashSet::new())
     }
 
     pub(crate) fn try_new_concrete(
         mut workspaces: Vec<Workspace<C>>,
         screen_details: Vec<Rect>,
         floating: HashMap<C, RelativeRect>,
+        fullscreen: HashSet<C>,
     ) -> Result<Self> {
         check_workspace_invariants(&workspaces)?;
 
@@ -92,6 +94,7 @@ where
             screens,
             hidden,
             floating,
+            fullscreen,
             previous_tag,
             invisible_tags: vec![],
             killed_clients: vec![],
@@ -285,6 +288,11 @@ where
         self.floating.contains_key(client)
     }
 
+    /// Check whether a given client is currently fullscreen.
+    pub fn is_fullscreen(&self, client: &C) -> bool {
+        self.fullscreen.contains(client)
+    }
+
     /// Check whether a given tag currently has any floating windows present.
     ///
     /// Returns false if the tag given is unknown to this StackSet.
@@ -297,6 +305,7 @@ where
     /// Delete a client from this [StackSet].
     pub fn remove_client(&mut self, client: &C) -> Option<C> {
         self.sink(client); // Clear any floating information we might have
+        self.fullscreen.remove(&client);
 
         self.workspaces_mut()
             .map(|w| w.remove(client))
@@ -1115,6 +1124,7 @@ pub mod tests {
                 .map(|k| Rect::new(k as i32 * 1000, k as i32 * 2000, 1000, 2000))
                 .collect(),
             HashMap::new(),
+            HashSet::new(),
         ) {
             Ok(s) => s,
             Err(e) => panic!("{e}"),
