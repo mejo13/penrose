@@ -53,15 +53,28 @@ pub fn set_fullscreen_state<X: XConn>(
         state.client_set.float(id, r)?;
         wstate.push(*full_screen);
         x.set_client_config(id, &[ClientConfig::BorderPx(0)])?; // remove borders
+
+        x.set_prop(id, net_wm_state, Prop::Cardinal(wstate))?;
+        x.refresh(state)?;
+
+        Ok(())
     } else if currently_fullscreen && (action == Remove || action == Toggle) {
         state.client_set.sink(&id);
         wstate.retain(|&val| val != *full_screen);
+
+        x.set_prop(id, net_wm_state, Prop::Cardinal(wstate))?;
+        x.refresh(state)?;
+
         // replace borders
         x.set_client_config(id, &[ClientConfig::BorderPx(state.config.border_width)])?;
-    }
 
-    x.set_prop(id, net_wm_state, Prop::Cardinal(wstate))?;
-    x.refresh(state)
+        Ok(())
+    } else {
+        Err(Error::Custom(format!(
+            "Failed to set fullscreen state of client. {:?}, {}",
+            action, id
+        )))
+    }
 }
 
 /// Toggle the fullscreen state of the currently focused window.
