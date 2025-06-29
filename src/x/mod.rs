@@ -326,12 +326,19 @@ pub trait XConnExt: XConn + Sized {
     fn position_clients(&self, state: &State<Self>) -> Result<()> {
         let border = state.config.border_width;
         let positions = &state.diff.after.positions;
-        let screen_positions: Vec<_> = state.client_set.screens().map(|s| s.r).collect();
 
         self.restack(positions.iter().map(|(id, _)| id))?;
 
+        let net_wm_state = Atom::NetWmState.as_ref();
+        let full_screen = self.intern_atom(Atom::NetWmStateFullscreen.as_ref())?;
+
         for &(c, mut r) in positions.iter() {
-            if !screen_positions.contains(&r) {
+            let wstate = match self.get_prop(c, net_wm_state) {
+                Ok(Some(Prop::Cardinal(vals))) => vals,
+                _ => vec![],
+            };
+
+            if !wstate.contains(&full_screen) {
                 r = r.shrink_in(border);
             }
             self.position_client(c, r)?;
