@@ -596,6 +596,16 @@ fn manage_existing_clients<X: XConn>(state: &mut State<X>, x: &X) -> Result<()> 
 
     for id in x.existing_clients()? {
         if !state.client_set.contains(&id) && client_should_be_manged(id, x) {
+            let net_wm_state = Atom::NetWmState.as_ref();
+            let full_screen = x.intern_atom(Atom::NetWmStateFullscreen.as_ref())?;
+            let mut wstate = match x.get_prop(id, net_wm_state) {
+                Ok(Some(Prop::Cardinal(vals))) => vals,
+                _ => vec![],
+            };
+            if wstate.contains(&full_screen) {
+                wstate.retain(|&val| val != *full_screen);
+                x.set_prop(id, net_wm_state, Prop::Cardinal(wstate))?;
+            }
             let workspace_id = match x.get_prop(id, Atom::NetWmDesktop.as_ref()) {
                 Ok(Some(Prop::Cardinal(ids))) => ids[0] as usize,
                 _ => 0, // we know that we always have at least one workspace
